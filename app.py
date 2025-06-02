@@ -1,6 +1,7 @@
 import streamlit as st
 import requests
 import json
+import pandas as pd
 from datetime import datetime
 
 # Configure the page
@@ -247,11 +248,125 @@ def submit_claim():
     except requests.exceptions.ConnectionError:
         st.error("Could not connect to the backend server.")
 
+def view_monthly_report():
+    st.header("Monthly Report")
+    st.write("View consolidated data for a specific month")
+
+    # Fetch available months
+    try:
+        months_response = requests.get("http://localhost:8000/reports/months")
+        if months_response.status_code != 200:
+            st.error("Failed to fetch available months")
+            return
+        
+        available_months = months_response.json()
+        if not available_months:
+            st.warning("No data available for reporting")
+            return
+        
+        # Month selection
+        selected_month = st.selectbox(
+            "Select Reporting Month",
+            options=available_months,
+            format_func=lambda x: datetime.strptime(x, "%Y-%m").strftime("%B %Y")
+        )
+        
+        # Fetch data for the selected month
+        with st.spinner("Loading report data..."):
+            # Get patients
+            patients_response = requests.get(f"http://localhost:8000/reports/patients?month={selected_month}")
+            if patients_response.status_code != 200:
+                st.error("Failed to fetch patient data")
+                return
+            patients_data = patients_response.json()
+            
+            # Get encounters with optional diagnosis filter
+            diagnosis_filter = st.text_input("Filter by Diagnosis (optional)", "")
+            encounters_url = f"http://localhost:8000/reports/encounters?month={selected_month}"
+            if diagnosis_filter:
+                encounters_url += f"&diagnosis={diagnosis_filter}"
+            encounters_response = requests.get(encounters_url)
+            if encounters_response.status_code != 200:
+                st.error("Failed to fetch encounter data")
+                return
+            encounters_data = encounters_response.json()
+            
+            # Get claims
+            claims_response = requests.get(f"http://localhost:8000/reports/claims?month={selected_month}")
+            if claims_response.status_code != 200:
+                st.error("Failed to fetch claims data")
+                return
+            claims_data = claims_response.json()
+            
+            # Display aggregate metrics
+            st.subheader("Monthly Statistics")
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("New Patients", len(patients_data))
+            with col2:
+                st.metric("Total Encounters", len(encounters_data))
+            with col3:
+                st.metric("Claims Submitted", len(claims_data))
+            
+            # Calculate financial metrics
+            total_amount = sum(float(claim.get("total", {}).get("value", 0)) for claim in claims_data)
+            accepted_claims = sum(1 for claim in claims_data if claim.get("status") == "accepted")
+            
+            col4, col5 = st.columns(2)
+            with col4:
+                st.metric("Total Billed Amount (USD)", f"${total_amount:,.2f}")
+            with col5:
+                st.metric("Accepted Claims", f"{accepted_claims}/{len(claims_data)}")
+            
+            # Display detailed tables
+            st.markdown("---")
+            
+            # Patients table
+            st.subheader("New Patient Registrations")
+            if patients_data:
+                patients_df = pd.DataFrame(patients_data)
+                patients_df = patients_df[["patient_id", "full_name", "created_at"]]
+                patients_df.columns = ["Patient ID", "Full Name", "Registration Date"]
+                st.dataframe(patients_df)
+            else:
+                st.info("No new patients registered this month")
+            
+            # Encounters table
+            st.subheader("Medical Encounters")
+            if encounters_data:
+                encounters_df = pd.DataFrame(encounters_data)
+                encounters_df = encounters_df[["encounter_id", "patient_name", "visit_date", "diagnosis", "treatment", "attending_clinician"]]
+                encounters_df.columns = ["Encounter ID", "Patient Name", "Visit Date", "Diagnosis", "Treatment", "Clinician"]
+                st.dataframe(encounters_df)
+            else:
+                st.info("No encounters recorded this month")
+            
+            # Claims table
+            st.subheader("Insurance Claims")
+            if claims_data:
+                # Extract relevant fields from nested claim structure
+                claims_list = []
+                for claim in claims_data:
+                    claims_list.append({
+                        "Claim ID": claim.get("id", ""),
+                        "Patient Name": claim.get("patient_name", ""),
+                        "Date Submitted": claim.get("created", ""),
+                        "Status": claim.get("status", ""),
+                        "Amount": claim.get("total", {}).get("value", 0)
+                    })
+                claims_df = pd.DataFrame(claims_list)
+                st.dataframe(claims_df)
+            else:
+                st.info("No claims submitted this month")
+    
+    except requests.exceptions.ConnectionError:
+        st.error("Could not connect to the backend server. Please ensure it is running.")
+
 def main():
     st.title("OpenMRS-OpenIMIS Integration")
     
     # Create a navigation menu
-    menu = ["Patient Registration", "Record Encounter", "View Patient History", "Submit Claim"]
+    menu = ["Patient Registration", "Record Encounter", "View Patient History", "Submit Claim", "Monthly Report"]
     choice = st.sidebar.selectbox("Select Action", menu)
     
     if choice == "Patient Registration":
@@ -260,6 +375,8 @@ def main():
         record_encounter()
     elif choice == "Submit Claim":
         submit_claim()
+    elif choice == "Monthly Report":
+        view_monthly_report()
     else:
         view_patient_history()
 

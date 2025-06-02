@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field, validator
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 import uuid
+from fastapi import Query
 
 app = FastAPI(title="OpenMRS-OpenIMIS Integration API")
 
@@ -132,6 +133,13 @@ def map_encounter_to_claim(encounter_id: str) -> dict:
                 
     raise HTTPException(status_code=404, detail="Encounter not found")
 
+def filter_by_month(date_str: str, target_month: str) -> bool:
+    """Helper function to check if a date falls within a specific month"""
+    try:
+        return date_str.startswith(target_month)
+    except:
+        return False
+
 @app.post("/patient", status_code=201)
 async def create_patient(patient: Patient):
     # Generate a unique patient ID
@@ -245,6 +253,77 @@ async def generate_claim_preview(encounter_id: str):
         return claim
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+@app.get("/reports/patients")
+async def get_patients_by_month(month: str = Query(..., regex="^\\d{4}-\\d{2}$")):
+    """Get patients registered in a specific month (YYYY-MM format)"""
+    filtered_patients = [
+        patient.dict() for patient in patients.values()
+        if filter_by_month(patient.created_at[:7], month)
+    ]
+    
+    return filtered_patients
+
+@app.get("/reports/encounters")
+async def get_encounters_by_month(
+    month: str = Query(..., regex="^\\d{4}-\\d{2}$"),
+    diagnosis: str = None
+):
+    """Get encounters recorded in a specific month with optional diagnosis filter"""
+    filtered_encounters = []
+    
+    for patient_encounters in encounters.values():
+        for encounter in patient_encounters:
+            if filter_by_month(encounter.visit_date[:7], month):
+                enc_dict = encounter.dict()
+                # Add patient name for display
+                if encounter.patient_id in patients:
+                    enc_dict["patient_name"] = patients[encounter.patient_id].full_name
+                if diagnosis is None or diagnosis.lower() in encounter.diagnosis.lower():
+                    filtered_encounters.append(enc_dict)
+    
+    return filtered_encounters
+
+@app.get("/reports/claims")
+async def get_claims_by_month(
+    month: str = Query(..., regex="^\\d{4}-\\d{2}$"),
+    status: str = None
+):
+    """Get claims submitted in a specific month with optional status filter"""
+    filtered_claims = [
+        claim.dict() for claim in claims.values()
+        if filter_by_month(claim.created[:7], month) and
+        (status is None or claim.status == status)
+    ]
+    
+    # Enhance claims with patient and encounter details
+    for claim in filtered_claims:
+        patient_ref = claim["patient"]["reference"]
+        patient_id = patient_ref.split("/")[-1]
+        if patient_id in patients:
+            claim["patient_name"] = patients[patient_id].full_name
+    
+    return filtered_claims
+
+@app.get("/reports/months")
+async def get_available_months():
+    """Get a list of months that have data"""
+    all_dates = set()
+    
+    # Collect dates from patients
+    for patient in patients.values():
+        all_dates.add(patient.created_at[:7])
+    
+    # Collect dates from encounters
+    for patient_encounters in encounters.values():
+        for encounter in patient_encounters:
+            all_dates.add(encounter.visit_date[:7])
+    
+    # Collect dates from claims
+    for claim in claims.values():
+        all_dates.add(claim.created[:7])
+    
+    return sorted(list(all_dates), reverse=True)
 
 if __name__ == "__main__":
     import uvicorn
