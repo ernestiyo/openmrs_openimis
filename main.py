@@ -44,6 +44,7 @@ class Encounter(BaseModel):
     attending_clinician: Optional[str] = None
     encounter_id: Optional[str] = None
     created_at: Optional[str] = None
+    total_price: Optional[float] = 0  # Price in Rupiah
 
 class ClaimCoding(BaseModel):
     system: Optional[str] = None
@@ -96,10 +97,8 @@ def map_encounter_to_claim(encounter_id: str) -> dict:
                 # Generate a simple treatment code based on diagnosis
                 treatment_code = f"TREAT{abs(hash(enc.diagnosis)) % 1000:03d}"
                 
-                # Calculate a dummy charge (based on diagnosis length as an example)
-                base_amount = 100.0
-                complexity_factor = len(enc.diagnosis) / 20  # Longer diagnosis = higher charge
-                total_amount = round(base_amount * (1 + complexity_factor), 2)
+                # Use the total price from the encounter, or calculate if not available
+                total_amount = enc.total_price if enc.total_price is not None else 0.0
 
                 # Construct the FHIR Claim
                 claim = {
@@ -130,11 +129,11 @@ def map_encounter_to_claim(encounter_id: str) -> dict:
                                 ]
                             },
                             "servicedDate": enc.visit_date,
-                            "unitPrice": {"value": total_amount, "currency": "USD"},
-                            "net": {"value": total_amount, "currency": "USD"}
+                            "unitPrice": {"value": total_amount, "currency": "IDR"},
+                            "net": {"value": total_amount, "currency": "IDR"}
                         }
                     ],
-                    "total": {"value": total_amount, "currency": "USD"}
+                    "total": {"value": total_amount, "currency": "IDR"}
                 }
 
                 if enc.attending_clinician:
@@ -355,6 +354,20 @@ async def reset_system():
     encounters.clear()
     claims.clear()
     return {"status": "success", "message": "All data has been reset"}
+
+@app.put("/claims/{claim_id}/process")
+async def process_claim(claim_id: str, status: str = Query(..., enum=["accepted", "rejected"])):
+    """Process a claim by updating its status"""
+    if claim_id not in claims:
+        raise HTTPException(status_code=404, detail="Klaim tidak ditemukan")
+    
+    claims[claim_id].status = status
+    
+    return {
+        "status": "success",
+        "message": f"Status klaim berhasil diperbarui menjadi {status}",
+        "data": claims[claim_id]
+    }
 
 # Enhanced error handling for existing endpoints
 @app.exception_handler(HTTPException)
