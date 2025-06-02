@@ -19,7 +19,7 @@ A prototype middleware system that facilitates data exchange between OpenMRS (an
 
 1. Clone this repository:
 ```powershell
-git clone <repository-url>
+git clone https://github.com/ernestiyo/openmrs_openimis.git
 cd openmrs_openimis
 ```
 
