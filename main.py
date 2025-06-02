@@ -1,12 +1,25 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query, Response
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, validator
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 import uuid
-from fastapi import Query
 
-app = FastAPI(title="OpenMRS-OpenIMIS Integration API")
+app = FastAPI(
+    title="OpenMRS-OpenIMIS Integration API",
+    description="A prototype middleware for healthcare data integration",
+    version="1.0.0"
+)
+
+# Enable CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # In-memory storage for patients
 patients = {}
@@ -324,6 +337,47 @@ async def get_available_months():
         all_dates.add(claim.created[:7])
     
     return sorted(list(all_dates), reverse=True)
+
+@app.get("/stats")
+async def get_system_stats():
+    """Get current system statistics"""
+    return {
+        "total_patients": len(patients),
+        "total_encounters": sum(len(e) for e in encounters.values()),
+        "total_claims": len(claims),
+        "last_updated": datetime.now().isoformat()
+    }
+
+@app.post("/reset")
+async def reset_system():
+    """Reset all system data"""
+    patients.clear()
+    encounters.clear()
+    claims.clear()
+    return {"status": "success", "message": "All data has been reset"}
+
+# Enhanced error handling for existing endpoints
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request, exc):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "status": "error",
+            "message": exc.detail,
+            "code": exc.status_code
+        }
+    )
+
+@app.exception_handler(Exception)
+async def general_exception_handler(request, exc):
+    return JSONResponse(
+        status_code=500,
+        content={
+            "status": "error",
+            "message": "An unexpected error occurred",
+            "detail": str(exc)
+        }
+    )
 
 if __name__ == "__main__":
     import uvicorn
