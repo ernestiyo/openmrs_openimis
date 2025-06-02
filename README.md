@@ -1,137 +1,176 @@
-# OpenMRS-OpenIMIS Integration Middleware
+# OpenMRS-OpenIMIS Integration Middleware untuk Klinik Desa
 
-A prototype middleware system that facilitates data exchange between OpenMRS (an open-source medical record system) and OpenIMIS (an open-source health insurance claims system) using FHIR standards. This system is built using FastAPI for the backend and Streamlit for the frontend interface.
+Sistem integrasi untuk menghubungkan OpenMRS (sistem rekam medis) dengan OpenIMIS (sistem klaim asuransi kesehatan) menggunakan standar FHIR. Sistem ini dibangun menggunakan FastAPI untuk backend dan Streamlit untuk antarmuka pengguna. Didesain khusus untuk konteks klinik desa di Indonesia.
 
-## Features
+## Fitur Utama
 
-- 🧑‍⚕️ **Patient Registration**: Register new patients with basic information
-- 📝 **Medical Encounters**: Record patient visits, diagnoses, and treatments
-- 💰 **FHIR Claims**: Generate and submit insurance claims in FHIR format
-- 📊 **Monthly Reporting**: View consolidated statistics and detailed reports
-- ⚙️ **Administration**: System management and data reset capabilities
+- 🧑‍⚕️ **Pendaftaran Pasien**: 
+  - Pendaftaran pasien baru dengan informasi dasar
+  - Sistem keluhan utama dengan dropdown dan opsi kustom
+  - Antarmuka dalam Bahasa Indonesia
 
-## Prerequisites
+- 📝 **Kunjungan Medis**: 
+  - Pencatatan kunjungan, diagnosis, dan pengobatan
+  - Daftar obat dengan harga dalam Rupiah
+  - Perhitungan otomatis total biaya pengobatan
 
-- Python 3.8 or higher
-- pip (Python package installer)
+- 💰 **Klaim Asuransi**: 
+  - Generate dan ajukan klaim FHIR
+  - Proses persetujuan/penolakan klaim
+  - Tampilan status klaim (diajukan/disetujui/ditolak)
 
-## Installation
+- 📊 **Pelaporan**: 
+  - Statistik bulanan dengan rincian biaya dalam Rupiah
+  - Laporan pasien, kunjungan, dan klaim
+  - Filter dan analisis data terperinci
 
-1. Clone this repository:
+- ⚙️ **Administrasi**: 
+  - Manajemen sistem dan statistik
+  - Reset data dengan konfirmasi
+  - Antarmuka pengguna yang mudah digunakan
+
+## Prasyarat
+
+- Python 3.8 atau lebih tinggi
+- pip (Penginstal paket Python)
+
+## Instalasi
+
+1. Clone repositori ini:
 ```powershell
 git clone https://github.com/ernestiyo/openmrs_openimis.git
 cd openmrs_openimis
 ```
 
-2. Create and activate a virtual environment (optional but recommended):
+2. Buat dan aktifkan virtual environment (opsional tapi direkomendasikan):
 ```powershell
 python -m venv venv
 .\venv\Scripts\Activate
 ```
 
-3. Install the required dependencies:
+3. Install dependensi yang diperlukan:
 ```powershell
 pip install -r requirements.txt
 ```
 
-## Running the Application
+## Menjalankan Aplikasi
 
-The application consists of two components that need to be run separately:
+Aplikasi ini terdiri dari dua komponen yang harus dijalankan secara terpisah:
 
-1. Start the FastAPI backend server:
+1. Jalankan server backend FastAPI:
 ```powershell
 uvicorn main:app --reload
 ```
-The backend will be available at http://localhost:8000
+Backend akan tersedia di http://localhost:8000
 
-2. In a new terminal, start the Streamlit frontend:
+2. Di terminal baru, jalankan frontend Streamlit:
 ```powershell
 streamlit run app.py
 ```
-The frontend will automatically open in your default web browser at http://localhost:8501
+Frontend akan otomatis terbuka di browser default Anda di http://localhost:8501
 
 ## Usage
 
-1. **Patient Registration**
-   - Navigate to "Register Patient" in the sidebar
-   - Fill in patient details (name, age, gender, chief complaint)
-   - Submit to create a new patient record
+1. **Pendaftaran Pasien**
+   - Pilih "Pendaftaran Pasien" di sidebar
+   - Isi data pasien (nama, usia, jenis kelamin)
+   - Pilih keluhan utama dari daftar atau tambahkan keluhan kustom
+   - Simpan data pasien baru
 
-2. **Recording Encounters**
-   - Go to "Record Encounter"
-   - Select an existing patient
-   - Enter visit details, diagnosis, and treatment
-   - Save the encounter
+2. **Pencatatan Kunjungan**
+   - Buka "Catat Kunjungan"
+   - Pilih pasien dari daftar
+   - Masukkan diagnosis dan pilih obat dari daftar
+   - Lihat perhitungan total biaya otomatis dalam Rupiah
+   - Tambahkan catatan pengobatan jika diperlukan
+   - Simpan kunjungan
 
-3. **Submitting Claims**
-   - Access "Submit Claim"
-   - Search and select an encounter
-   - Review the generated FHIR claim
-   - Submit the claim
+3. **Pengelolaan Klaim**
+   - Akses "Ajukan & Proses Klaim"
+   - Untuk mengajukan klaim:
+     - Pilih kunjungan dari daftar
+     - Review detail klaim FHIR
+     - Ajukan klaim
+   - Untuk memproses klaim:
+     - Lihat daftar klaim yang menunggu
+     - Review detail klaim
+     - Setujui atau tolak klaim
 
-4. **Viewing Reports**
-   - Open "Monthly Report"
-   - Select a month to view statistics
-   - Use filters to analyze specific data
-   - Export or review detailed tables
+4. **Laporan Bulanan**
+   - Buka "Laporan Bulanan"
+   - Pilih bulan untuk melihat statistik
+   - Lihat rincian:
+     - Total biaya obat dalam Rupiah
+     - Status klaim asuransi
+     - Filter data berdasarkan diagnosis
+   - Review tabel detail pasien, kunjungan, dan klaim
 
-5. **Administration**
-   - Access system statistics
-   - Reset data if needed (requires confirmation)
+5. **Administrasi**
+   - Akses statistik sistem
+   - Lihat total pasien, kunjungan, dan klaim
+   - Reset data jika diperlukan (memerlukan konfirmasi)
 
-## API Documentation
+## Dokumentasi API
 
-The FastAPI backend provides automatic API documentation:
+Backend FastAPI menyediakan dokumentasi API otomatis:
 - Swagger UI: http://localhost:8000/docs
 - ReDoc: http://localhost:8000/redoc
 
-## Project Structure
+## Struktur Proyek
 
 ```
 openmrs_openimis/
-├── main.py           # FastAPI backend server
-├── app.py           # Streamlit frontend application
-└── requirements.txt  # Python dependencies
+├── main.py           # Server backend FastAPI
+├── app.py           # Aplikasi frontend Streamlit
+└── requirements.txt  # Daftar dependensi Python
 ```
 
-## Technical Details
+## Detail Teknis
 
-- Backend: FastAPI with in-memory storage
-- Frontend: Streamlit with interactive components
-- Data Format: FHIR-compliant JSON for claims
-- Authentication: Not implemented in prototype
+- Backend: FastAPI dengan penyimpanan in-memory
+- Frontend: Streamlit dengan komponen interaktif
+- Format Data: JSON yang sesuai dengan standar FHIR
+- Bahasa: Antarmuka dalam Bahasa Indonesia
+- Mata Uang: Rupiah (IDR)
+- Fitur Khusus:
+  - Daftar obat dengan harga standar
+  - Sistem keluhan dengan opsi preset
+  - Perhitungan otomatis biaya dalam Rupiah
+  - Manajemen persetujuan klaim
 
-## Limitations
+## Keterbatasan
 
-- Uses in-memory storage (data is lost when server restarts)
-- Basic FHIR compliance for demonstration
-- No real connection to OpenMRS or OpenIMIS
-- Limited security features
+- Menggunakan penyimpanan in-memory (data hilang saat server restart)
+- Kepatuhan FHIR dasar untuk demonstrasi
+- Belum terhubung ke sistem OpenMRS atau OpenIMIS yang sebenarnya
+- Fitur keamanan terbatas
+- Belum ada fitur pencetakan resep atau kwitansi
+- Belum ada manajemen stok obat
 
-## Development
+## Pengembangan
 
-To modify or extend the application:
+Untuk memodifikasi atau mengembangkan aplikasi:
 
-1. Backend changes:
-   - Edit `main.py` to add/modify API endpoints
-   - Use Pydantic models for data validation
-   - Restart the uvicorn server to apply changes
+1. Perubahan Backend:
+   - Edit `main.py` untuk menambah/mengubah endpoint API
+   - Gunakan model Pydantic untuk validasi data
+   - Restart server uvicorn untuk menerapkan perubahan
 
-2. Frontend changes:
-   - Modify `app.py` to update the UI
-   - Changes are automatically reloaded by Streamlit
+2. Perubahan Frontend:
+   - Modifikasi `app.py` untuk mengupdate UI
+   - Perubahan akan otomatis dimuat ulang oleh Streamlit
 
-## Troubleshooting
+## Pemecahan Masalah
 
-1. If you can't connect to the backend:
-   - Ensure the FastAPI server is running
-   - Check if port 8000 is available
+1. Jika tidak bisa terhubung ke backend:
+   - Pastikan server FastAPI sedang berjalan
+   - Periksa apakah port 8000 tersedia
 
-2. If the frontend doesn't load:
-   - Verify Streamlit installation
-   - Check if port 8501 is free
-   - Clear browser cache if needed
+2. Jika frontend tidak mau dimuat:
+   - Verifikasi instalasi Streamlit
+   - Periksa apakah port 8501 bebas
+   - Bersihkan cache browser jika perlu
 
-3. If data isn't persisting:
-   - Remember this is an in-memory system
-   - Data resets when the backend server restarts
+3. Jika data tidak tersimpan:
+   - Ingat bahwa ini adalah sistem in-memory
+   - Data akan hilang saat server di-restart
